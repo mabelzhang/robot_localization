@@ -286,13 +286,10 @@ void RosFilter<T>::controlStampedCallback(
     // Update the filter with this control term
     filter_.setControl(latest_control_, msg->header.stamp);
   } else {
-    // ROS_WARN_STREAM_THROTTLE(5.0, "Commanded velocities must be given in the
-    // robot's body frame (" << base_link_frame_id_ << "). Message frame was " <<
-    // msg->header.frame_id);
-    std::cerr <<
+    rclcpp::Clock clock = *(this->get_clock());
+    RCLCPP_WARN_STREAM_THROTTLE(this->get_logger(), clock, 5.0 * 10e9,
       "Commanded velocities must be given in the robot's body frame (" <<
-      base_link_frame_id_ << "). Message frame was " <<
-      msg->header.frame_id << "\n";
+      base_link_frame_id_ << "). Message frame was " << msg->header.frame_id);
   }
 }
 
@@ -585,13 +582,15 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       if (!revertTo(first_measurement_time - rclcpp::Duration(1))) {
         RF_DEBUG("ERROR: history interval is too small to revert to time " <<
           filter_utilities::toSec(first_measurement_time) << "\n");
-        // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_,
-        //   "Received old measurement for topic " << first_measurement_topic <<
-        //   ", but history interval is insufficiently sized. "
-        //   "Measurement time is " << std::setprecision(20) <<
-        //   first_measurement_time <<
-        //   ", current time is " << current_time <<
-        //   ", history length is " << history_length_ << ".");
+        rclcpp::Clock clock = *(this->get_clock());
+        RCLCPP_WARN_STREAM_SKIPFIRST_THROTTLE(this->get_logger(), clock,
+          history_length_.nanoseconds(),
+          "Received old measurement for topic " << first_measurement_topic <<
+          ", but history interval is insufficiently sized. "
+          "Measurement time is " << std::setprecision(20) <<
+          first_measurement_time.seconds() <<
+          ", current time is " << current_time.seconds() <<
+          ", history length is " << history_length_.seconds() << ".");
         restored_measurement_count = 0;
       }
 
@@ -1989,10 +1988,10 @@ void RosFilter<T>::periodicUpdate()
 
           world_transform_broadcaster_->sendTransform(map_odom_trans_msg);
         } catch (...) {
-          // ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain
-          // transform from "
-          //                                  << odom_frame_id_ << "->" <<
-          //                                  base_link_frame_id_);
+          rclcpp::Clock clock = *(this->get_clock());
+          RCLCPP_ERROR_STREAM_SKIPFIRST_THROTTLE(this->get_logger(), clock,
+            5.0 * 10e9, "Could not obtain transform from " << odom_frame_id_ <<
+            "->" << base_link_frame_id_);
         }
       } else {
         std::cerr << "Odometry message frame_id was " <<
@@ -2053,7 +2052,8 @@ void RosFilter<T>::setPoseCallback(
   RF_DEBUG(
     "------ RosFilter<T>::setPoseCallback ------\nPose message:\n" << msg);
 
-  // ROS_INFO_STREAM("Received set_pose request with value\n" << *msg);
+  // RCLCPP_INFO_STREAM(this->get_logger(),
+  //   "Received set_pose request with value\n" << *msg);
 
   std::string topic_name("set_pose");
 
@@ -2417,7 +2417,7 @@ bool RosFilter<T>::prepareAcceleration(
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
     tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
-    target_frame_trans);
+    this->get_logger(), *(this->get_clock()), target_frame_trans);
 
   if (can_transform) {
     // We don't know if the user has already handled the removal
@@ -2437,7 +2437,7 @@ bool RosFilter<T>::prepareAcceleration(
         tf2::Transform imuFrameTrans;
         ros_filter_utilities::lookupTransformSafe(
           tf_buffer_.get(), msg_frame, target_frame, msg->header.stamp, tf_timeout_,
-          imuFrameTrans);
+          this->get_logger(), *(this->get_clock()), imuFrameTrans);
         stateTmp = imuFrameTrans.getBasis() * stateTmp;
         curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
       } else {
@@ -2622,7 +2622,7 @@ bool RosFilter<T>::preparePose(
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
     tf_buffer_.get(), final_target_frame, pose_tmp.frame_id_,
     rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
-    target_frame_trans);
+    this->get_logger(), *(this->get_clock()), target_frame_trans);
 
   // 3. Make sure we can work with this data before carrying on
   if (can_transform) {
@@ -3003,7 +3003,7 @@ bool RosFilter<T>::prepareTwist(
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
     tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
-    target_frame_trans);
+    this->get_logger(), *(this->get_clock()), target_frame_trans);
 
   if (can_transform) {
     // Transform to correct frame. Note that we can get linear velocity
@@ -3114,7 +3114,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   RF_DEBUG("\nRequested time was " << std::setprecision(20) <<
     filter_utilities::toSec(time) << "\n")
 
-  // size_t history_size = filter_state_history_.size();
+  size_t history_size = filter_state_history_.size();
 
   // Walk back through the queue until we reach a filter state whose time stamp
   // is less than or equal to the requested time. Since every saved state after
@@ -3144,11 +3144,13 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
         filter_utilities::toSec(last_history_state->latest_control_time_) <<
         ".\n");
 
-      // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_, "Could not revert "
-      //   "to state with time " << std::setprecision(20) << time <<
-      //   ". Instead reverted to state with time " <<
-      //   lastHistoryState->lastMeasurementTime_ << ". History size was " <<
-      //   history_size);
+      rclcpp::Clock clock = *(this->get_clock());
+      RCLCPP_WARN_STREAM_SKIPFIRST_THROTTLE(this->get_logger(), clock,
+        history_length_.nanoseconds(), "Could not revert "
+        "to state with time " << std::setprecision(20) << time.seconds() <<
+        ". Instead reverted to state with time " <<
+        last_history_state->last_measurement_time_.seconds() <<
+        ". History size was " << history_size);
     }
   }
 

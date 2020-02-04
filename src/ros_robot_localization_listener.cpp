@@ -51,15 +51,6 @@
 #include "robot_localization/ros_robot_localization_listener.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"
 
-#define THROTTLE(clock, duration, thing) do { \
-    static rclcpp::Time _last_output_time ## __LINE__(0, 0, (clock)->get_clock_type()); \
-    auto _now = (clock)->now(); \
-    if (_now - _last_output_time ## __LINE__ > (duration)) { \
-      _last_output_time ## __LINE__ = _now; \
-      thing; \
-    } \
-} while (0)
-
 namespace robot_localization
 {
 FilterTypes::FilterType filterTypeFromString(
@@ -157,12 +148,11 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   // Wait until the base and world frames are set by the incoming messages
   while (rclcpp::ok() && base_frame_id_.empty()) {
     rclcpp::spin_some(node);
-    // TODO(ros2/rclcpp#879) RCLCPP_THROTTLE_INFO() when released
-    THROTTLE(node->get_clock(), std::chrono::seconds(1),
-      RCLCPP_INFO(node_logger_->get_logger(),
-      "Ros Robot Localization Listener: Waiting for incoming messages on "
-      "topics %s and %s",
-      odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str()));
+    rclcpp::Clock clock = *node_clock_;
+    RCLCPP_INFO_THROTTLE(node_logger_->get_logger(), clock, 1 * 10e9,
+      "Ros Robot Localization Listener: "
+      "Waiting for incoming messages on topics %s and %s",
+      odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str());
     rclcpp::Rate(10).sleep();
   }
 }

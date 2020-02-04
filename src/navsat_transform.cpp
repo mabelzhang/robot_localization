@@ -440,7 +440,7 @@ void NavSatTransform::getRobotOriginUtmPose(
   tf2::Transform offset;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
     tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
-    transform_timeout_, offset);
+    transform_timeout_, this->get_logger(), *(this->get_clock()), offset);
 
   if (can_transform) {
     // Get the orientation we'll use for our UTM->world transform
@@ -487,13 +487,15 @@ void NavSatTransform::getRobotOriginWorldPose(
   tf2::Transform gps_offset_rotated;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
     tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
-    transform_timeout_, gps_offset_rotated);
+    transform_timeout_, this->get_logger(), *(this->get_clock()),
+    gps_offset_rotated);
 
   if (can_transform) {
     tf2::Transform robot_orientation;
     can_transform = ros_filter_utilities::lookupTransformSafe(
       tf_buffer_.get(), world_frame_id_, base_link_frame_id_, transform_time,
-      transform_timeout_, robot_orientation);
+      transform_timeout_, this->get_logger(), *(this->get_clock()),
+      robot_orientation);
 
     if (can_transform) {
       // Zero out rotation because we don't care about the orientation of the
@@ -579,7 +581,8 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
     tf2::Transform target_frame_trans;
     bool can_transform = ros_filter_utilities::lookupTransformSafe(
       tf_buffer_.get(), base_link_frame_id_, msg->header.frame_id,
-      msg->header.stamp, transform_timeout_, target_frame_trans);
+      msg->header.stamp, transform_timeout_, this->get_logger(),
+      *(this->get_clock()), target_frame_trans);
 
     if (can_transform) {
       double roll_offset = 0;
@@ -754,7 +757,8 @@ void NavSatTransform::setTransformGps(
   RCLCPP_INFO(
     this->get_logger(), "Datum (latitude, longitude, altitude) is (%d, %d, %d)",
     msg->latitude, msg->longitude, msg->altitude);
-  RCLCPP_INFO(this->get_logger(), "Datum UTM coordinate is (%d, %d)", utm_x, utm_y);
+  RCLCPP_INFO(this->get_logger(),
+    "Datum UTM coordinate is (%d, %d)", utm_x, utm_y);
 
   transform_utm_pose_.setOrigin(tf2::Vector3(utm_x, utm_y, msg->altitude));
   transform_utm_pose_.setRotation(tf2::Quaternion::getIdentity());
@@ -767,8 +771,8 @@ void NavSatTransform::setTransformOdometry(
   tf2::fromMsg(msg->pose.pose, transform_world_pose_);
   has_transform_odom_ = true;
 
-  // TODO(anyone) add back in Eloquent
-  // ROS_INFO_STREAM_ONCE("Initial odometry pose is " << transform_world_pose_);
+  RCLCPP_INFO_STREAM_ONCE(this->get_logger(),
+    "Initial odometry pose is " << transform_world_pose_);
 
   // Users can optionally use the (potentially fused) heading from
   // the odometry source, which may have multiple fused sources of

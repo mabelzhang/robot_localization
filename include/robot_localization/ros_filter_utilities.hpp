@@ -70,6 +70,8 @@ double getYaw(const tf2::Quaternion quat);
 //! @param[in] sourceFrame - The source frame of the desired transform
 //! @param[in] time - The time at which we want the transform
 //! @param[in] timeout - How long to block before falling back to last transform
+//! @param[in] logger - rclcpp Logger object for logging
+//! @param[in] clock - rclcpp Clock object for logging
 //! @param[out] targetFrameTrans - The resulting transform object
 //! @param[in] silent - Whether or not to print transform warnings
 //! @return Sets the value of @p targetFrameTrans and returns true if
@@ -88,6 +90,8 @@ bool lookupTransformSafe(
   const std::string & source_frame,
   const rclcpp::Time & time,
   const rclcpp::Duration & timeout,
+  const rclcpp::Logger & logger,
+  rclcpp::Clock & clock,
   tf2::Transform & target_frame_trans,
   const bool silent = false);
 
@@ -96,6 +100,8 @@ bool lookupTransformSafe(
 //! @param[in] targetFrame - The target frame of the desired transform
 //! @param[in] sourceFrame - The source frame of the desired transform
 //! @param[in] time - The time at which we want the transform
+//! @param[in] logger - rclcpp Logger object for logging
+//! @param[in] clock - rclcpp Clock object for logging
 //! @param[out] targetFrameTrans - The resulting transform object
 //! @param[in] silent - Whether or not to print transform warnings
 //! @return Sets the value of @p targetFrameTrans and returns true if
@@ -113,6 +119,8 @@ bool lookupTransformSafe(
   const std::string & targetFrame,
   const std::string & sourceFrame,
   const rclcpp::Time & time,
+  const rclcpp::Logger & logger,
+  rclcpp::Clock & clock,
   tf2::Transform & targetFrameTrans,
   const bool silent = false);
 
