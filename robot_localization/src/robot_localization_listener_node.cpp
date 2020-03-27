@@ -39,7 +39,7 @@
 #include <memory>
 
 #include "robot_localization/ros_robot_localization_listener.hpp"
-#include "robot_localization/srv/get_state.hpp"
+#include "robot_localization_msgs/srv/get_state.hpp"
 
 namespace robot_localization
 {
@@ -50,7 +50,7 @@ public:
   RobotLocalizationListenerNode()
   : rclcpp::Node("robot_localization_listener_node")
   {
-    service_ = this->create_service<robot_localization::srv::GetState>(
+    service_ = this->create_service<robot_localization_msgs::srv::GetState>(
       "get_state",
       std::bind(&RobotLocalizationListenerNode::getStateCallback, this,
       std::placeholders::_1, std::placeholders::_2));
@@ -69,11 +69,11 @@ public:
 
 private:
   std::shared_ptr<RosRobotLocalizationListener> rll_;
-  rclcpp::Service<robot_localization::srv::GetState>::SharedPtr service_;
+  rclcpp::Service<robot_localization_msgs::srv::GetState>::SharedPtr service_;
 
   bool getStateCallback(
-    const std::shared_ptr<robot_localization::srv::GetState::Request> req,
-    const std::shared_ptr<robot_localization::srv::GetState::Response> res)
+    const std::shared_ptr<robot_localization_msgs::srv::GetState::Request> req,
+    const std::shared_ptr<robot_localization_msgs::srv::GetState::Response> res)
   {
     Eigen::VectorXd state(STATE_SIZE);
     Eigen::MatrixXd covariance(STATE_SIZE, STATE_SIZE);

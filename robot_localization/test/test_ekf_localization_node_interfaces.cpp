@@ -29,7 +29,8 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-// Header files names ahs been updated as per ros2
+
+// Header file names has been updated as per ros2
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <gtest/gtest.h>
@@ -43,9 +44,8 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-
+#include "robot_localization_msgs/srv/set_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "robot_localization/srv/set_pose.hpp"
 
 using namespace std::chrono_literals;
 
@@ -60,11 +60,11 @@ void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 
 void resetFilter(rclcpp::Node::SharedPtr node_)
 {
-  // ros2 style service-client server has been implemented
+  // ros2 type service-client has been implemented
   auto client =
-    node_->create_client<robot_localization::srv::SetPose>("set_pose");
+    node_->create_client<robot_localization_msgs::srv::SetPose>("set_pose");
   auto setPoseRequest =
-    std::make_shared<robot_localization::srv::SetPose::Request>();
+    std::make_shared<robot_localization_msgs::srv::SetPose::Request>();
 
   setPoseRequest->pose.pose.pose.orientation.w = 1;
   setPoseRequest->pose.header.frame_id = "odom";
@@ -86,8 +86,9 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
   double deltaX = 0.0;
   double deltaY = 0.0;
   double deltaZ = 0.0;
-  // Timing and spinning is updated as per ros2
+
   if (ret == rclcpp::executor::FutureReturnCode::SUCCESS) {
+    // timing and spinning has been changed as per ros2
     rclcpp::Rate(2).sleep();
     rclcpp::spin_some(node_);
     deltaX = filtered_.pose.pose.position.x -
@@ -96,9 +97,12 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
       setPoseRequest->pose.pose.pose.position.y;
     deltaZ = filtered_.pose.pose.position.z -
       setPoseRequest->pose.pose.pose.position.z;
+    EXPECT_LT(::sqrt(
+        deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ),
+      0.1);
+  } else {
+    EXPECT_TRUE(false);
   }
-
-  EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
 
 TEST(InterfacesTest, OdomPoseBasicIO) {
@@ -114,6 +118,7 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
+
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
   odom.pose.pose.position.y = 10.0;
@@ -125,7 +130,7 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
 
   odom.header.frame_id = "odom";
   odom.child_frame_id = "base_link";
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(50);
   for (size_t i = 0; i < 50; ++i) {
     odom.header.stamp = node_->now();
@@ -145,7 +150,7 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
   EXPECT_LT(filtered_.pose.covariance[7],
     0.25);          // Configuration for this variable for this sensor is false
-  EXPECT_LT(filtered_.pose.covariance[14], 0.6);
+  EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
   resetFilter(node_);
 }
@@ -161,6 +166,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
+
   nav_msgs::msg::Odometry odom;
   odom.twist.twist.linear.x = 5.0;
   odom.twist.twist.linear.y = 0.0;
@@ -175,7 +181,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   odom.header.frame_id = "odom";
   odom.child_frame_id = "base_link";
-  // changed the spinning and timing as per ros2
+
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 400; ++i) {
     odom.header.stamp = node_->now();
@@ -183,7 +189,6 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
     0.1);
@@ -200,7 +205,6 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - odom.twist.twist.linear.y),
     0.1);
@@ -321,7 +325,7 @@ TEST(InterfacesTest, PoseBasicIO) {
   }
 
   pose.header.frame_id = "odom";
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(50);
 
   for (size_t i = 0; i < 50; ++i) {
@@ -330,6 +334,7 @@ TEST(InterfacesTest, PoseBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
+  rclcpp::spin_some(node_);
 
   // Now check the values from the callback
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x),
@@ -351,13 +356,14 @@ TEST(InterfacesTest, TwistBasicIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_TwistBasicIO_testcase");
+
   // publish and subscribe calls have been changed as per ros2
   auto twistPub =
     node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-    "twist_input0", rclcpp::QoS(5));
+    "twist_input0", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", rclcpp::QoS(5), filterCallback);
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   geometry_msgs::msg::TwistWithCovarianceStamped twist;
   twist.twist.twist.linear.x = 5.0;
@@ -372,7 +378,7 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
 
   twist.header.frame_id = "base_link";
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 400; ++i) {
     twist.header.stamp = node_->now();
@@ -395,6 +401,7 @@ TEST(InterfacesTest, TwistBasicIO) {
     twist.header.stamp = node_->now();
     twistPub->publish(twist);
     rclcpp::spin_some(node_);
+
     loopRate.sleep();
   }
   rclcpp::spin_some(node_);
@@ -496,13 +503,13 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuPoseBasicIO_testcase");
-  auto custom_qos_profile = rclcpp::SensorDataQoS();
+
   // publish and subscribe calls have been changed as per ros2
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "/imu_input0", custom_qos_profile);
+    "/imu_input0", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", custom_qos_profile, filterCallback);
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   sensor_msgs::msg::Imu imu;
   tf2::Quaternion quat;
@@ -517,7 +524,7 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
 
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate1(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
@@ -554,9 +561,10 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
   for (size_t i = 0; i < 50; ++i) {
     imuIgnore.header.stamp = node_->now();
     imuPub->publish(imuIgnore);
-    loopRate2.sleep();
     rclcpp::spin_some(node_);
+    loopRate2.sleep();
   }
+  rclcpp::spin_some(node_);
 
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
   mat.setRotation(quat);
@@ -573,13 +581,13 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuTwistBasicIO_testcase");
-  auto custom_qos_profile = rclcpp::SensorDataQoS();
+
   // publish and subscribe calls have been changed as per ros2
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "/imu_input1", custom_qos_profile);
+    "/imu_input1", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", custom_qos_profile, filterCallback);
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   sensor_msgs::msg::Imu imu;
   tf2::Quaternion quat;
@@ -590,14 +598,15 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   }
 
   imu.header.frame_id = "base_link";
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    loopRate.sleep();
     rclcpp::spin_some(node_);
+    loopRate.sleep();
   }
+  rclcpp::spin_some(node_);
 
   // Now check the values from the callback
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
@@ -631,9 +640,12 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
 
   // Now check the values from the callback
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
-  tf2::Quaternion expected_quat(tf2::Vector3(0., 1., 0.), -M_PI / 3.0);
-  EXPECT_LT(std::abs(tf2Angle(expected_quat.getAxis(), quat.getAxis())), 0.1);
-  EXPECT_LT(std::abs(expected_quat.getAngle() - quat.getAngle()), 0.7);
+  mat.setRotation(quat);
+  mat.getRPY(r, p, y);
+  EXPECT_LT(::fabs(r), 0.1);
+  EXPECT_LT(::fabs(p + M_PI / 3.0), 0.7);
+  EXPECT_LT(::fabs(y), 0.1);
+
   EXPECT_LT(filtered_.twist.covariance[28], 1e-3);
   EXPECT_LT(filtered_.pose.covariance[28], 0.1);
 
@@ -650,7 +662,6 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
   // Now check the values from the callback
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
@@ -661,7 +672,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   EXPECT_LT(::fabs(y - M_PI / 4.0), 0.7);
 
   EXPECT_LT(filtered_.twist.covariance[35], 1e-3);
-  EXPECT_LT(filtered_.pose.covariance[35], 0.12);
+  EXPECT_LT(filtered_.pose.covariance[35], 0.1);
 
   resetFilter(node_);
 
@@ -695,13 +706,13 @@ TEST(InterfacesTest, ImuAccBasicIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuAccBasicIO_testcase");
-  auto custom_qos_profile = rclcpp::SensorDataQoS();
+
   // publish and subscribe calls have been changed as per ros2
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "imu_input2", custom_qos_profile);
+    "imu_input2", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", custom_qos_profile, filterCallback);
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
@@ -715,7 +726,7 @@ TEST(InterfacesTest, ImuAccBasicIO) {
 
   // Move with constant acceleration for 1 second,
   // then check our velocity.
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
@@ -723,11 +734,10 @@ TEST(InterfacesTest, ImuAccBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.40);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.40);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.40);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.4);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.4);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.4);
 
   imu.linear_acceleration.x = 0.0;
   imu.linear_acceleration.y = 0.0;
@@ -737,8 +747,8 @@ TEST(InterfacesTest, ImuAccBasicIO) {
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    loopRate.sleep();
     rclcpp::spin_some(node_);
+    loopRate.sleep();
   }
 
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.8), 0.4);
@@ -774,13 +784,13 @@ TEST(InterfacesTest, OdomDifferentialIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_OdomDifferentialIO_testcase");
-  auto custom_qos_profile = rclcpp::SensorDataQoS();
+
   // publish and subscribe calls have been changed as per ros2
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
-    "/odom_input1", custom_qos_profile);
+    "/odom_input1", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", custom_qos_profile, filterCallback);
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
@@ -824,7 +834,7 @@ TEST(InterfacesTest, OdomDifferentialIO) {
   }
 
   // Slowly move the position, and hope that the differential position keeps up
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 100; ++i) {
     odom.pose.pose.position.x += 0.01;
@@ -849,13 +859,14 @@ TEST(InterfacesTest, PoseDifferentialIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_PoseDifferentialIO_testcase");
+
   // publish and subscribe calls have been changed as per ros2
   auto posePub =
     node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "/pose_input1", rclcpp::QoS(5));
+    "/pose_input1", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", rclcpp::QoS(5), filterCallback);
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose;
   pose.pose.pose.position.x = 20.0;
@@ -901,7 +912,7 @@ TEST(InterfacesTest, PoseDifferentialIO) {
 
   // Issue this location repeatedly, and see if we get
   // a final reported position of (1, 2, -3)
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 100; ++i) {
     pose.pose.pose.position.x += 0.01;
@@ -926,18 +937,17 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuDifferentialIO_testcase");
-  auto custom_qos_profile = rclcpp::SensorDataQoS();
+
   // publish and subscribe calls have been changed as per ros2
   auto imu0Pub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "/imu_input0", custom_qos_profile);
+    "/imu_input0", rclcpp::SensorDataQoS());
   auto imu1Pub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "/imu_input1", custom_qos_profile);
+    "/imu_input1", rclcpp::SensorDataQoS());
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "/imu_input3", custom_qos_profile);
+    "/imu_input3", rclcpp::SensorDataQoS());
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered", custom_qos_profile, filterCallback);
-
+    "/odometry/filtered", rclcpp::QoS(1), filterCallback);
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
   tf2::Quaternion quat;
@@ -977,7 +987,7 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   double yawFinal = yaw;
 
   // Move the orientation slowly, and see if we can push it to 0
-  // changed the spinning and timing as per ros2
+  // changed the spinnin and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 100; ++i) {
     yawFinal -= 0.01 * (3.0 * M_PI / 4.0);

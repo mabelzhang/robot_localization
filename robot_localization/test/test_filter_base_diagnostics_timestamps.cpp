@@ -46,7 +46,7 @@
 #include "rclcpp/time.hpp"
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"
-#include "robot_localization/srv/set_pose.hpp"
+#include "robot_localization_msgs/srv/set_pose.hpp"
 
 namespace robot_localization
 {
@@ -124,7 +124,7 @@ private:
 
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr
     diagnostic_sub_;
-  rclcpp::Client<robot_localization::srv::SetPose>::SharedPtr set_pose_;
+  rclcpp::Client<robot_localization_msgs::srv::SetPose>::SharedPtr set_pose_;
 
 public:
   std::vector<diagnostic_msgs::msg::DiagnosticArray> diagnostics;
@@ -162,7 +162,7 @@ public:
       });
 
     set_pose_ =
-      node_->create_client<robot_localization::srv::SetPose>("set_pose");
+      node_->create_client<robot_localization_msgs::srv::SetPose>("set_pose");
   }
 
   void publishMessages(rclcpp::Time t)
@@ -183,7 +183,7 @@ public:
   void setPose(rclcpp::Time t)
   {
     auto setPoseRequest =
-      std::make_shared<robot_localization::srv::SetPose::Request>();
+      std::make_shared<robot_localization_msgs::srv::SetPose::Request>();
     setPoseRequest->pose.header.frame_id = "base_link";
     setPoseRequest->pose.pose = getValidPose()->pose;
     setPoseRequest->pose.header.stamp = t;

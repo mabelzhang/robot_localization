@@ -105,12 +105,12 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
-  datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
+  datum_srv_ = this->create_service<robot_localization_msgs::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
 
-  to_ll_srv_ = this->create_service<robot_localization::srv::ToLL>(
+  to_ll_srv_ = this->create_service<robot_localization_msgs::srv::ToLL>(
     "toLL", std::bind(&NavSatTransform::toLLCallback, this, _1, _2));
-  from_ll_srv_ = this->create_service<robot_localization::srv::FromLL>(
+  from_ll_srv_ = this->create_service<robot_localization_msgs::srv::FromLL>(
     "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
 
   std::vector<double> datum_vals;
@@ -127,14 +127,14 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       datum_yaw = datum_vals[2];
     }
 
-    auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
+    auto request = std::make_shared<robot_localization_msgs::srv::SetDatum::Request>();
     request->geo_pose.position.latitude = datum_lat;
     request->geo_pose.position.longitude = datum_lon;
     request->geo_pose.position.altitude = 0.0;
     tf2::Quaternion quat;
     quat.setRPY(0.0, 0.0, datum_yaw);
     request->geo_pose.orientation = tf2::toMsg(quat);
-    auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
+    auto response = std::make_shared<robot_localization_msgs::srv::SetDatum::Response>();
     datumCallback(request, response);
   }
 
@@ -292,8 +292,8 @@ void NavSatTransform::computeTransform()
 }
 
 bool NavSatTransform::datumCallback(
-  robot_localization::srv::SetDatum::Request::SharedPtr request,
-  robot_localization::srv::SetDatum::Response::SharedPtr)
+  robot_localization_msgs::srv::SetDatum::Request::SharedPtr request,
+  robot_localization_msgs::srv::SetDatum::Response::SharedPtr)
 {
   // If we get a service call with a manual datum, even if we already computed
   // the transform using the robot's initial pose, then we want to assume that
@@ -341,8 +341,8 @@ bool NavSatTransform::datumCallback(
 }
 
 bool NavSatTransform::toLLCallback(
-  const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
-  std::shared_ptr<robot_localization::srv::ToLL::Response> response)
+  const std::shared_ptr<robot_localization_msgs::srv::ToLL::Request> request,
+  std::shared_ptr<robot_localization_msgs::srv::ToLL::Response> response)
 {
   if (!transform_good_) {
     return false;
@@ -358,8 +358,8 @@ bool NavSatTransform::toLLCallback(
 }
 
 bool NavSatTransform::fromLLCallback(
-  const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
-  std::shared_ptr<robot_localization::srv::FromLL::Response> response)
+  const std::shared_ptr<robot_localization_msgs::srv::FromLL::Request> request,
+  std::shared_ptr<robot_localization_msgs::srv::FromLL::Response> response)
 {
   double altitude = request->ll_point.altitude;
   double longitude = request->ll_point.longitude;

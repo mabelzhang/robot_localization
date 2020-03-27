@@ -150,9 +150,9 @@ template<typename T>
 void RosFilter<T>::toggleFilterProcessingCallback(
   const std::shared_ptr<rmw_request_id_t>/*request_header*/,
   const std::shared_ptr<
-    robot_localization::srv::ToggleFilterProcessing::Request> req,
+    robot_localization_msgs::srv::ToggleFilterProcessing::Request> req,
   const std::shared_ptr<
-    robot_localization::srv::ToggleFilterProcessing::Response> resp)
+    robot_localization_msgs::srv::ToggleFilterProcessing::Response> resp)
 {
   if (req->on == toggled_on_) {
     RCLCPP_WARN(this->get_logger(),
@@ -991,7 +991,7 @@ void RosFilter<T>::loadParams()
 
   // Create a service for manually setting/resetting pose
   set_pose_service_ =
-    this->create_service<robot_localization::srv::SetPose>(
+    this->create_service<robot_localization_msgs::srv::SetPose>(
     "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
@@ -1004,7 +1004,7 @@ void RosFilter<T>::loadParams()
   // Create a service for toggling processing new measurements while still
   // publishing
   toggle_filter_processing_srv_ =
-    this->create_service<robot_localization::srv::ToggleFilterProcessing>(
+    this->create_service<robot_localization_msgs::srv::ToggleFilterProcessing>(
     "toggle", std::bind(&RosFilter<T>::toggleFilterProcessingCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
@@ -2100,8 +2100,8 @@ void RosFilter<T>::setPoseCallback(
 template<typename T>
 bool RosFilter<T>::setPoseSrvCallback(
   const std::shared_ptr<rmw_request_id_t>/*request_header*/,
-  const std::shared_ptr<robot_localization::srv::SetPose::Request> request,
-  std::shared_ptr<robot_localization::srv::SetPose::Response>/*response*/)
+  const std::shared_ptr<robot_localization_msgs::srv::SetPose::Request> request,
+  std::shared_ptr<robot_localization_msgs::srv::SetPose::Response>/*response*/)
 {
   geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg =
     std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(
